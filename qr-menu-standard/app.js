@@ -1,7 +1,18 @@
-const store = window.storeData;
+const store = window.storeData || {
+  name: "QR Menu",
+  tableName: "",
+  kakaoUrl: "https://pf.kakao.com/",
+  currency: "원",
+  categories: [],
+  commonOptions: {},
+  menus: []
+};
+const categories = Array.isArray(store.categories) ? store.categories : [];
+const menus = Array.isArray(store.menus) ? store.menus : [];
 
+// App state
 const state = {
-  activeCategory: store.categories[0].id,
+  activeCategory: categories[0]?.id || "",
   filter: "all",
   search: "",
   orderType: "매장 이용",
@@ -11,13 +22,14 @@ const state = {
   quantity: 1
 };
 
+// DOM references
 const $ = (selector) => document.querySelector(selector);
 
 const tabsEl = $(".category-tabs");
 const titleEl = $(".category-title");
 const menuListEl = $(".menu-list");
 const menuCountEl = $(".menu-count");
-const searchInputEl = $(".search-box input");
+const searchInputEl = $(".menu-search input");
 const cartPanelEl = $(".cart-panel");
 const cartToggleEl = $(".cart-toggle");
 const cartSummaryEl = $(".cart-summary");
@@ -37,15 +49,16 @@ const addCartButtonEl = $(".add-cart-button");
 const toastEl = $(".toast");
 const tableLabelEl = $(".table-label");
 const orderModalBackdropEl = $(".order-modal-backdrop");
-const copyTextEl = $(".copy-text");
-const copyKakaoLinkEl = $(".copy-kakao-link");
-const copyCloseEl = $(".copy-close");
-const copyHelpEl = $(".copy-help");
-const copyOrderButtonEl = $(".copy-order-button");
+const orderTextEl = $(".order-text");
+const orderKakaoLinkEl = $(".order-kakao-link");
+const orderCloseEl = $(".order-close");
+const orderHelpEl = $(".order-help");
+const orderCopyButtonEl = $(".order-copy-button");
 const orderPreviewEl = $(".order-preview");
 
+// Data and formatting helpers
 const formatPrice = (price) => `${price.toLocaleString("ko-KR")}${store.currency}`;
-const activeCategory = () => store.categories.find((category) => category.id === state.activeCategory);
+const activeCategory = () => categories.find((category) => category.id === state.activeCategory);
 const toPrice = (value) => Number(value) || 0;
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -61,8 +74,14 @@ function getMenuOptions(menu) {
   return [...fromRefs, ...(menu.options || [])];
 }
 
+// Menu rendering
 function renderTabs() {
-  tabsEl.innerHTML = store.categories
+  if (!categories.length) {
+    tabsEl.innerHTML = "";
+    return;
+  }
+
+  tabsEl.innerHTML = categories
     .map((category) => {
       const active = category.id === state.activeCategory ? "active" : "";
       return `<button class="${active}" type="button" data-category="${escapeHtml(category.id)}">${escapeHtml(category.label)}</button>`;
@@ -72,17 +91,18 @@ function renderTabs() {
 
 function getVisibleMenus() {
   const keyword = state.search.trim().toLowerCase();
-  return store.menus.filter((menu) => {
-    const matchCategory = menu.category === state.activeCategory;
+  return menus.filter((menu) => {
+    const matchCategory = !state.activeCategory || menu.category === state.activeCategory;
     const matchFilter = state.filter === "all" || menu.badge === "Best";
-    const matchSearch = !keyword || `${menu.name} ${menu.description}`.toLowerCase().includes(keyword);
+    const searchableText = `${menu.name || ""} ${menu.description || ""}`.toLowerCase();
+    const matchSearch = !keyword || searchableText.includes(keyword);
     return matchCategory && matchFilter && matchSearch;
   });
 }
 
 function renderMenus() {
   const visibleMenus = getVisibleMenus();
-  titleEl.textContent = activeCategory().label;
+  titleEl.textContent = activeCategory()?.label || "전체 메뉴";
   menuCountEl.textContent = `${visibleMenus.length}개`;
 
   if (!visibleMenus.length) {
@@ -103,7 +123,7 @@ function renderMenus() {
             <h3>${escapeHtml(menu.name)}</h3>
             <p>${escapeHtml(menu.description)}</p>
             <div>
-              <strong>${formatPrice(menu.price)}</strong>
+              <strong>${formatPrice(toPrice(menu.price))}</strong>
               <span>옵션 선택</span>
             </div>
           </div>
@@ -113,11 +133,13 @@ function renderMenus() {
     .join("");
 }
 
+// Option modal
 function hydrateDefaultOptions() {
   state.selectedOptions = {};
   getMenuOptions(state.selectedMenu).forEach((group, groupIndex) => {
-    if (group.type !== "multiple" && group.items.length) {
-      state.selectedOptions[groupIndex] = [group.items[0]];
+    const groupItems = Array.isArray(group.items) ? group.items : [];
+    if (group.type !== "multiple" && groupItems.length) {
+      state.selectedOptions[groupIndex] = [groupItems[0]];
     }
   });
 }
@@ -132,7 +154,7 @@ function getItemTotal(item) {
 
 function renderOptionModal() {
   const menu = state.selectedMenu;
-  const category = store.categories.find((item) => item.id === menu.category);
+  const category = categories.find((item) => item.id === menu.category);
   const optionGroups = getMenuOptions(menu);
 
   modalImageEl.src = menu.image;
@@ -146,7 +168,8 @@ function renderOptionModal() {
   optionGroupsEl.innerHTML = optionGroups
     .map((group, groupIndex) => {
       const type = group.type === "multiple" ? "checkbox" : "radio";
-      const options = group.items
+      const groupItems = Array.isArray(group.items) ? group.items : [];
+      const options = groupItems
         .map((item, itemIndex) => {
           const inputId = `option-${groupIndex}-${itemIndex}`;
           const checked = type === "radio" && itemIndex === 0 ? "checked" : "";
@@ -162,7 +185,7 @@ function renderOptionModal() {
                 ${checked}
               />
               <span>${escapeHtml(item.label)}</span>
-              ${item.price ? `<em>+${formatPrice(item.price)}</em>` : ""}
+              ${toPrice(item.price) ? `<em>+${formatPrice(toPrice(item.price))}</em>` : ""}
             </label>
           `;
         })
@@ -187,7 +210,8 @@ function updateAddCartButton() {
 }
 
 function openModal(menuId) {
-  state.selectedMenu = store.menus.find((menu) => menu.id === menuId);
+  state.selectedMenu = menus.find((menu) => menu.id === menuId);
+  if (!state.selectedMenu) return;
   state.quantity = 1;
   renderOptionModal();
   modalBackdropEl.hidden = false;
@@ -200,6 +224,7 @@ function closeModal() {
   document.body.classList.remove("modal-open");
 }
 
+// Cart
 function renderCart() {
   const count = state.cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = state.cart.reduce((sum, item) => sum + getItemTotal(item), 0);
@@ -242,6 +267,7 @@ function renderCart() {
     .join("");
 }
 
+// Order confirmation
 function showToast(message) {
   toastEl.textContent = message;
   toastEl.classList.add("show");
@@ -280,16 +306,16 @@ function openOrderModal(orderText, helpText) {
   toastEl.classList.remove("show");
   window.clearTimeout(showToast.timer);
   setOrderModalHelp(helpText);
-  copyTextEl.value = orderText;
-  copyKakaoLinkEl.href = store.kakaoUrl;
+  orderTextEl.value = orderText;
+  orderKakaoLinkEl.href = store.kakaoUrl;
   renderOrderPreview();
   orderModalBackdropEl.hidden = false;
   document.body.classList.add("modal-open");
-  copyOrderButtonEl.focus();
+  orderCopyButtonEl.focus();
 }
 
 function setOrderModalHelp(message) {
-  copyHelpEl.textContent = message;
+  orderHelpEl.textContent = message;
 }
 
 function renderOrderPreview() {
@@ -325,11 +351,11 @@ function renderOrderPreview() {
 
 async function copyCurrentOrderText() {
   try {
-    await navigator.clipboard.writeText(copyTextEl.value);
+    await navigator.clipboard.writeText(orderTextEl.value);
     setOrderModalHelp("주문 내용이 복사되었습니다. 카카오톡 채널에 붙여넣어 주세요.");
   } catch {
-    copyTextEl.focus();
-    copyTextEl.select();
+    orderTextEl.focus();
+    orderTextEl.select();
     setOrderModalHelp("복사가 막혔습니다. 선택된 주문 내용을 직접 복사해 주세요.");
   }
 }
@@ -339,54 +365,52 @@ function closeOrderModal() {
   document.body.classList.remove("modal-open");
 }
 
-tabsEl.addEventListener("click", (event) => {
+// Event handlers
+function handleCategoryClick(event) {
   const button = event.target.closest("button[data-category]");
   if (!button) return;
   state.activeCategory = button.dataset.category;
   renderTabs();
   renderMenus();
-});
+}
 
-$(".toolbar").addEventListener("click", (event) => {
+function handleFilterClick(event) {
   const button = event.target.closest("button[data-filter]");
   if (!button) return;
   state.filter = button.dataset.filter;
   document.querySelectorAll(".filter-button").forEach((item) => item.classList.toggle("active", item === button));
   renderMenus();
-});
+}
 
-$(".order-type").addEventListener("click", (event) => {
+function handleOrderTypeClick(event) {
   const button = event.target.closest("button[data-order-type]");
   if (!button) return;
   state.orderType = button.dataset.orderType;
-  document.querySelectorAll(".order-type button").forEach((item) => item.classList.toggle("active", item === button));
-});
+  document.querySelectorAll(".order-mode-selector button").forEach((item) => item.classList.toggle("active", item === button));
+}
 
-searchInputEl.addEventListener("input", (event) => {
-  state.search = event.target.value;
-  renderMenus();
-});
-
-menuListEl.addEventListener("click", (event) => {
+function handleMenuCardClick(event) {
   const card = event.target.closest(".menu-card");
   if (card) openModal(card.dataset.menuId);
-});
+}
 
-menuListEl.addEventListener("keydown", (event) => {
+function handleMenuCardKeydown(event) {
   if (event.key !== "Enter" && event.key !== " ") return;
   const card = event.target.closest(".menu-card");
   if (!card) return;
   event.preventDefault();
   openModal(card.dataset.menuId);
-});
+}
 
-optionGroupsEl.addEventListener("change", (event) => {
+function handleOptionChange(event) {
   const input = event.target;
   if (!input.matches("input")) return;
 
   const groupIndex = input.dataset.groupIndex;
   const group = getMenuOptions(state.selectedMenu)[groupIndex];
-  const selectedItem = group.items[input.dataset.itemIndex];
+  const groupItems = Array.isArray(group?.items) ? group.items : [];
+  const selectedItem = groupItems[input.dataset.itemIndex];
+  if (!selectedItem) return;
 
   if (input.type === "radio") {
     state.selectedOptions[groupIndex] = [selectedItem];
@@ -398,21 +422,9 @@ optionGroupsEl.addEventListener("change", (event) => {
   }
 
   updateAddCartButton();
-});
+}
 
-$(".quantity-minus").addEventListener("click", () => {
-  state.quantity = Math.max(1, state.quantity - 1);
-  quantityValueEl.textContent = state.quantity;
-  updateAddCartButton();
-});
-
-$(".quantity-plus").addEventListener("click", () => {
-  state.quantity += 1;
-  quantityValueEl.textContent = state.quantity;
-  updateAddCartButton();
-});
-
-addCartButtonEl.addEventListener("click", () => {
+function addSelectedMenuToCart() {
   const wasCartOpen = cartPanelEl.classList.contains("open");
   state.cart.push({
     menu: state.selectedMenu,
@@ -424,31 +436,9 @@ addCartButtonEl.addEventListener("click", () => {
   cartPanelEl.classList.toggle("open", wasCartOpen);
   cartToggleEl.setAttribute("aria-expanded", String(wasCartOpen));
   showToast("장바구니에 담았습니다.");
-});
+}
 
-$(".modal-close").addEventListener("click", closeModal);
-modalBackdropEl.addEventListener("click", (event) => {
-  if (event.target === modalBackdropEl) closeModal();
-});
-
-copyCloseEl.addEventListener("click", closeOrderModal);
-copyOrderButtonEl.addEventListener("click", copyCurrentOrderText);
-orderModalBackdropEl.addEventListener("click", (event) => {
-  if (event.target === orderModalBackdropEl) closeOrderModal();
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
-  if (!modalBackdropEl.hidden) closeModal();
-  if (!orderModalBackdropEl.hidden) closeOrderModal();
-});
-
-cartToggleEl.addEventListener("click", () => {
-  const open = cartPanelEl.classList.toggle("open");
-  cartToggleEl.setAttribute("aria-expanded", String(open));
-});
-
-cartItemsEl.addEventListener("click", (event) => {
+function handleCartActionClick(event) {
   const button = event.target.closest("button[data-cart-action]");
   if (!button) return;
 
@@ -461,11 +451,64 @@ cartItemsEl.addEventListener("click", (event) => {
   if (button.dataset.cartAction === "remove" || item.quantity <= 0) state.cart.splice(index, 1);
 
   renderCart();
-});
+}
 
-orderButtonEl.addEventListener("click", copyOrderAndOpenKakao);
+function handleEscapeKey(event) {
+  if (event.key !== "Escape") return;
+  if (!modalBackdropEl.hidden) closeModal();
+  if (!orderModalBackdropEl.hidden) closeOrderModal();
+}
 
-tableLabelEl.textContent = store.tableName;
-renderTabs();
-renderMenus();
-renderCart();
+function bindEvents() {
+  tabsEl.addEventListener("click", handleCategoryClick);
+  $(".menu-toolbar").addEventListener("click", handleFilterClick);
+  $(".order-mode-selector").addEventListener("click", handleOrderTypeClick);
+  searchInputEl.addEventListener("input", (event) => {
+    state.search = event.target.value;
+    renderMenus();
+  });
+
+  menuListEl.addEventListener("click", handleMenuCardClick);
+  menuListEl.addEventListener("keydown", handleMenuCardKeydown);
+  optionGroupsEl.addEventListener("change", handleOptionChange);
+
+  $(".quantity-minus").addEventListener("click", () => {
+    state.quantity = Math.max(1, state.quantity - 1);
+    quantityValueEl.textContent = state.quantity;
+    updateAddCartButton();
+  });
+  $(".quantity-plus").addEventListener("click", () => {
+    state.quantity += 1;
+    quantityValueEl.textContent = state.quantity;
+    updateAddCartButton();
+  });
+  addCartButtonEl.addEventListener("click", addSelectedMenuToCart);
+
+  $(".modal-close").addEventListener("click", closeModal);
+  modalBackdropEl.addEventListener("click", (event) => {
+    if (event.target === modalBackdropEl) closeModal();
+  });
+  orderCloseEl.addEventListener("click", closeOrderModal);
+  orderCopyButtonEl.addEventListener("click", copyCurrentOrderText);
+  orderModalBackdropEl.addEventListener("click", (event) => {
+    if (event.target === orderModalBackdropEl) closeOrderModal();
+  });
+  document.addEventListener("keydown", handleEscapeKey);
+
+  cartToggleEl.addEventListener("click", () => {
+    const open = cartPanelEl.classList.toggle("open");
+    cartToggleEl.setAttribute("aria-expanded", String(open));
+  });
+  cartItemsEl.addEventListener("click", handleCartActionClick);
+  orderButtonEl.addEventListener("click", copyOrderAndOpenKakao);
+}
+
+function initApp() {
+  tableLabelEl.textContent = store.tableName;
+  renderTabs();
+  renderMenus();
+  renderCart();
+  bindEvents();
+}
+
+initApp();

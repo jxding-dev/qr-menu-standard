@@ -1,14 +1,17 @@
 window.storeData = {
+  // 자주 수정: 매장명, 테이블명, 카카오톡 채널 URL
   name: "On The Table",
   tableName: "B-07",
   kakaoUrl: "https://pf.kakao.com/",
   currency: "원",
+  // 자주 수정: 메뉴 카테고리. id는 각 메뉴의 category와 맞춰야 합니다.
   categories: [
     { id: "signature", label: "시그니처" },
     { id: "coffee", label: "커피" },
     { id: "dessert", label: "디저트" },
     { id: "drink", label: "음료" }
   ],
+  // 자주 수정: 여러 메뉴가 같이 쓰는 옵션 묶음
   commonOptions: {
     temperature: {
       name: "온도",
@@ -38,6 +41,7 @@ window.storeData = {
       ]
     }
   },
+  // 자주 수정: 실제 메뉴명, 설명, 가격, 사진, 옵션
   menus: [
     {
       id: "cream-latte",
