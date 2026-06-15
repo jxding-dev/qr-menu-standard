@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>온더테이블 QR 메뉴판</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <!-- Store hero: 매장명, 대표 이미지, 영업 상태를 수정하는 영역 -->
+      <section class="store-hero">
+        <img class="store-hero__image" src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80" alt="온더테이블 매장 내부" />
+        <div class="store-hero__shade"></div>
+        <div class="store-hero__content">
+          <div class="brand-row">
+            <span class="brand-mark">OT</span>
+            <span class="open-badge">영업중</span>
+          </div>
+          <p class="store-hero__eyebrow">QR Table Menu</p>
+          <h1>On The Table</h1>
+          <p>테이블에서 메뉴 선택, 옵션 확인, 주문 내용 복사까지 한 번에.</p>
+        </div>
+      </section>
+
+      <!-- Store summary: 운영시간, 테이블, 주문 채널 -->
+      <section class="store-summary" aria-label="매장 핵심 정보">
+        <div class="surface-card">
+          <span>운영시간</span>
+          <strong>10:00 - 22:00</strong>
+        </div>
+        <div class="surface-card">
+          <span>주문테이블</span>
+          <strong class="table-label"></strong>
+        </div>
+        <div class="surface-card">
+          <span>주문채널</span>
+          <strong>카카오톡</strong>
+        </div>
+      </section>
+
+      <!-- Store links: 전화, 인스타그램, 지도 링크 -->
+      <section class="store-actions" aria-label="매장 바로가기">
+        <a href="tel:0212345678">전화</a>
+        <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">인스타</a>
+        <a href="https://map.kakao.com/" target="_blank" rel="noreferrer">지도</a>
+      </section>
+
+      <!-- Promotion banner: 이벤트/공지 문구 -->
+      <section class="promotion-banner surface-card">
+        <span>Today</span>
+        <strong>디저트 세트 주문 시 아메리카노 1,000원 할인</strong>
+      </section>
+
+      <!-- Order mode selector: 매장/포장 선택 -->
+      <section class="order-mode-selector" aria-label="주문 방식 선택">
+        <button class="active" type="button" data-order-type="매장 이용">매장</button>
+        <button type="button" data-order-type="포장">포장</button>
+      </section>
+
+      <!-- Menu controls: 검색과 필터 -->
+      <section class="menu-toolbar">
+        <label class="menu-search surface-card">
+          <span>검색</span>
+          <input type="search" placeholder="메뉴명 검색" />
+        </label>
+        <button class="filter-button active" type="button" data-filter="all">전체</button>
+        <button class="filter-button" type="button" data-filter="best">Best</button>
+      </section>
+
+      <!-- Menu categories: app.js에서 menuData.js의 categories로 렌더링 -->
+      <nav class="category-tabs" aria-label="메뉴 카테고리"></nav>
+
+      <!-- Menu list: app.js에서 menuData.js의 menus로 렌더링 -->
+      <section class="menu-section" aria-live="polite">
+        <div class="section-heading">
+          <div>
+            <p>Menu</p>
+            <h2 class="category-title"></h2>
+          </div>
+          <span class="menu-count"></span>
+        </div>
+        <div class="menu-list"></div>
+      </section>
+
+      <!-- Cart panel: 주문 내역, 요청사항, 주문 확인 버튼 -->
+      <aside class="cart-panel" aria-label="장바구니">
+        <button class="cart-toggle" type="button" aria-expanded="false">
+          <span>장바구니</span>
+          <strong class="cart-summary">0개 · 0원</strong>
+        </button>
+        <div class="cart-body">
+          <div class="cart-items"></div>
+          <label class="request-box">
+            <span>요청사항</span>
+            <textarea rows="3" placeholder="예: 얼음 적게, 테이크아웃 컵"></textarea>
+          </label>
+          <div class="cart-total">
+            <span>총 주문금액</span>
+            <strong class="total-price">0원</strong>
+          </div>
+          <button class="order-button" type="button">카카오톡으로 주문하기</button>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Option modal: 메뉴 옵션 선택 -->
+    <div class="modal-backdrop" hidden>
+      <section class="option-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal-close" type="button" aria-label="닫기">×</button>
+        <img class="modal-image" src="" alt="" />
+        <div class="modal-content">
+          <div class="modal-title-row">
+            <div>
+              <p class="modal-category"></p>
+              <h2 id="modal-title"></h2>
+            </div>
+            <strong class="modal-base-price"></strong>
+          </div>
+          <p class="modal-description"></p>
+          <div class="option-groups"></div>
+          <div class="quantity-row">
+            <span>수량</span>
+            <div class="quantity-control">
+              <button class="quantity-minus" type="button" aria-label="수량 줄이기">−</button>
+              <strong class="quantity-value">1</strong>
+              <button class="quantity-plus" type="button" aria-label="수량 늘리기">+</button>
+            </div>
+          </div>
+          <button class="add-cart-button" type="button">담기</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Order modal: 최종 주문 내역 확인과 카카오톡 이동 -->
+    <div class="order-modal-backdrop" hidden>
+      <section class="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-title">
+        <div class="order-modal__header">
+          <div>
+            <p>Order Summary</p>
+            <h2 id="order-title">주문 확인</h2>
+          </div>
+          <button class="order-close" type="button" aria-label="닫기">×</button>
+        </div>
+        <p class="order-help">주문 내용을 확인한 뒤 카카오톡 채널로 보내 주세요.</p>
+        <div class="order-preview"></div>
+        <textarea class="order-text" rows="5" readonly></textarea>
+        <button class="order-copy-button" type="button">주문 내용 복사</button>
+        <a class="order-kakao-link" href="https://pf.kakao.com/" target="_blank" rel="noreferrer">카카오톡 채널 열기</a>
+      </section>
+    </div>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./menuData.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
